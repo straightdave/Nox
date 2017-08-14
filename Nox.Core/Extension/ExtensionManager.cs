@@ -1,16 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net;
-using System.Net.Http;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Nox.Core.Extension
 {
 	internal class ExtensionManager
 	{
-		public List<INoxExtension> ExtList { get; set; }
+		public List<INoxExtension> ExtList { get; private set; }
 
 		public ExtensionManager()
 		{
@@ -20,21 +16,23 @@ namespace Nox.Core.Extension
 		public ExtensionManager RegExt<T>() where T : INoxExtension
 		{
 			T ext = Activator.CreateInstance<T>();
-			ext.Init();
 			ExtList.Add(ext);
 			return this;
 		}
 
-		public INoxExtension GetExt<T>(int n = 0) where T : INoxExtension
+		public ExtensionManager RegExt(Action<HttpListenerContext> process)
 		{
-			return ExtList.Where(e => e.GetType() == typeof(T)).ElementAtOrDefault(n);
+			var ext = new DummyExtension(process);
+			ExtList.Add(ext);
+			return this;
 		}
-
+		
 		public void ProcessAllExt(HttpListenerContext context)
 		{
-			for (int i = 0; i < ExtList.Count(); i++)
+			var itor = ExtList.GetEnumerator();
+			while (itor.MoveNext())
 			{
-				var ext = ExtList.ElementAt(i);
+				var ext = itor.Current;
 				ext.Process(context);
 			}
 		}

@@ -1,15 +1,13 @@
 ﻿using Nox.Core.Extension;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
 using System.Net;
-using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Nox.Core
 {
-	public class Server
+	public class NoxServer
 	{
 		private const string LOCALHOST = "127.0.0.1";
 
@@ -17,39 +15,54 @@ namespace Nox.Core
 
 		internal Dictionary<int, bool> Listenees { get; private set; }
 
-		public Server()
+		public NoxServer()
 		{
 			Listenees = new Dictionary<int, bool>();
 			ExtManager = new ExtensionManager();
 		}
 
-		public Server ListenTo(int port, bool isHttps = false)
+		public NoxServer ListenTo(int port, bool isHttps = false)
 		{
 			Listenees[port] = isHttps;
 			return this;
 		}
 
-		public Server RegisterExt<T>() where T : INoxExtension
+		public NoxServer RegisterExt<T>() where T : INoxExtension
 		{
 			ExtManager.RegExt<T>();
+			return this;
+		}
+
+		public NoxServer RegisterExt(Action<HttpListenerContext> process)
+		{
+			ExtManager.RegExt(process);
 			return this;
 		}
 
 		public void Start()
 		{
 			var listener = new HttpListener();
+
 			foreach (var kv in Listenees)
 			{
 				var _proto = kv.Value ? "https://" : "http://";
 				listener.Prefixes.Add($"{_proto}{LOCALHOST}:{kv.Key}/");
-			};
+			}
 
 			listener.Start();
 
+			var sem = new Semaphore(100, 100);
+
 			while (true)
 			{
-				var context = listener.GetContext();
-				ExtManager.ProcessAllExt(context);
+				sem.WaitOne();
+
+				listener.GetContextAsync().ContinueWith(async act =>
+				{
+					sem.Release();
+					var _context = await act;
+					await Task.Run(() => ExtManager.ProcessAllExt(_context));
+				});
 			}
 		}
 	}

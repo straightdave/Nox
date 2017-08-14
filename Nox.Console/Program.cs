@@ -1,19 +1,20 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Nox.Core;
+using Nox.CommonExtension;
 
-namespace Nox
+namespace Nox.SampleApp
 {
 	class Program
 	{
 		static void Main(string[] args)
 		{
-			new Server()
+			Console.WriteLine("Nox ...");
+
+			new NoxServer()
 				.ListenTo(12345)
-				.RegisterExt<SimpleExt>()
+				.RegisterExt(context => Console.WriteLine($"Get {context.Request.Url}"))
+				.RegisterExt<MITMExtension>()
+				.RegisterExt(context => Console.WriteLine($"Done {context.Request.Url}"))
 				.Start();
 		}
 	}
