@@ -13,7 +13,7 @@ namespace Nox.SampleApp
 			new NoxServer()
 				.ListenTo(12345)
 				.RegisterExt(context => Console.WriteLine($"Get {context.Request.Url}"))
-				.RegisterExt<MITMExtension>()
+				.RegisterExt<SampleExtension>()
 				.RegisterExt(context => Console.WriteLine($"Done {context.Request.Url}"))
 				.Start();
 		}

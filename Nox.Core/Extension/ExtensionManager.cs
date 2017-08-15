@@ -35,6 +35,9 @@ namespace Nox.Core.Extension
 				var ext = itor.Current;
 				ext.Process(context);
 			}
+
+			context.Response.OutputStream.Flush();
+			context.Response.OutputStream.Close();
 		}
 	}
 }

@@ -1,9 +1,9 @@
-﻿using Nox.Core.Extension;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using Nox.Core.Extension;
 
 namespace Nox.Core
 {
@@ -39,30 +39,34 @@ namespace Nox.Core
 			return this;
 		}
 
+		/// <summary>
+		/// TODO: start the listener in a thread (or process?)
+		/// </summary>
 		public void Start()
 		{
-			var listener = new HttpListener();
-
-			foreach (var kv in Listenees)
+			using (var listener = new HttpListener())
 			{
-				var _proto = kv.Value ? "https://" : "http://";
-				listener.Prefixes.Add($"{_proto}{LOCALHOST}:{kv.Key}/");
-			}
-
-			listener.Start();
-
-			var sem = new Semaphore(100, 100);
-
-			while (true)
-			{
-				sem.WaitOne();
-
-				listener.GetContextAsync().ContinueWith(async act =>
+				foreach (var kv in Listenees)
 				{
-					sem.Release();
-					var _context = await act;
-					await Task.Run(() => ExtManager.ProcessAllExt(_context));
-				});
+					var _proto = kv.Value ? "https://" : "http://";
+					listener.Prefixes.Add($"{_proto}{LOCALHOST}:{kv.Key}/");
+				}
+
+				listener.Start();
+
+				var sem = new Semaphore(100, 100);
+
+				while (true)
+				{
+					sem.WaitOne();
+
+					listener.GetContextAsync().ContinueWith(async act =>
+					{
+						sem.Release();
+						var _context = await act;
+						await Task.Run(() => ExtManager.ProcessAllExt(_context));
+					});
+				}
 			}
 		}
 	}
