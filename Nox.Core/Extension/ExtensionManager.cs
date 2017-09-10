@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Net;
+using System.Net.Sockets;
 
 namespace Nox.Core.Extension
 {
@@ -13,31 +13,40 @@ namespace Nox.Core.Extension
 			ExtList = new List<INoxExtension>();
 		}
 
+		public ExtensionManager RegExt(INoxExtension ext)
+		{
+			ExtList.Add(ext);
+			return this;
+		}
+
 		public ExtensionManager RegExt<T>() where T : INoxExtension
 		{
 			T ext = Activator.CreateInstance<T>();
 			ExtList.Add(ext);
 			return this;
 		}
-
-		public ExtensionManager RegExt(Action<HttpListenerContext> process)
+		
+		public ExtensionManager RegExt(Action<TcpClient> process)
 		{
 			var ext = new DummyExtension(process);
 			ExtList.Add(ext);
 			return this;
 		}
 		
-		public void ProcessAllExt(HttpListenerContext context)
+		public void ProcessAllExt(TcpClient tcpClient)
 		{
 			var itor = ExtList.GetEnumerator();
 			while (itor.MoveNext())
 			{
 				var ext = itor.Current;
-				ext.Process(context);
-			}
 
-			context.Response.OutputStream.Flush();
-			context.Response.OutputStream.Close();
+				// if previous extension close the tcp stream/client,
+				// the later extensions would be ignored
+				if (tcpClient.Connected)
+				{
+					ext.Process(tcpClient);
+				}
+			}
 		}
 	}
 }

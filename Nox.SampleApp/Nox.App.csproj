@@ -46,19 +46,18 @@
   <ItemGroup>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="SampleExtension.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Nox.CommonExtension\Nox.CommonExtension.csproj">
-      <Project>{4702da50-8c11-4604-8af7-b0bd1b17bb67}</Project>
-      <Name>Nox.CommonExtension</Name>
-    </ProjectReference>
     <ProjectReference Include="..\Nox.Core\Nox.Core.csproj">
       <Project>{ed570fa4-f306-45c2-b830-442a033221d8}</Project>
       <Name>Nox.Core</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Nox.Extension\Nox.Extension.csproj">
+      <Project>{67FA6D03-0DC0-48A7-85C7-CB0F739313A4}</Project>
+      <Name>Nox.Extension</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

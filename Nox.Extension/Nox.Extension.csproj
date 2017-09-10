@@ -4,11 +4,11 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{4702DA50-8C11-4604-8AF7-B0BD1B17BB67}</ProjectGuid>
+    <ProjectGuid>{67FA6D03-0DC0-48A7-85C7-CB0F739313A4}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Nox.CommonExtension</RootNamespace>
-    <AssemblyName>Nox.CommonExtension</AssemblyName>
+    <RootNamespace>Nox.Extension</RootNamespace>
+    <AssemblyName>Nox.Extension</AssemblyName>
     <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
@@ -40,8 +40,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="MITMExtension.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="NoxProxy.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Nox.Core\Nox.Core.csproj">

@@ -1,20 +1,24 @@
 ﻿using System;
-using System.Net;
+using System.Net.Sockets;
 
 namespace Nox.Core.Extension
 {
 	class DummyExtension : INoxExtension
 	{
-		private Action<HttpListenerContext> _action;
+		private Action<TcpClient> _action;
 
-		public DummyExtension(Action<HttpListenerContext> process)
+		public DummyExtension(Action<TcpClient> process)
 		{
 			_action = process;
 		}
 
-		public void Process(HttpListenerContext context)
+		public event NoxExtensionEventHandler BeginProcessing;
+		public event NoxExtensionEventHandler EndProcessing;
+		public event NoxExtensionEventHandler ErrorOccured;
+
+		public void Process(TcpClient tcpClient)
 		{
-			_action.Invoke(context);
+			_action.Invoke(tcpClient);
 		}
 	}
 }

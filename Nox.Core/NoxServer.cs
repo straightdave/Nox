@@ -1,6 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Net;
+using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Nox.Core.Extension;
@@ -9,64 +9,80 @@ namespace Nox.Core
 {
 	public class NoxServer
 	{
-		private const string LOCALHOST = "127.0.0.1";
+		private Thread _loopingListenerThread;
+		private TcpListener _listener;
+		private ExtensionManager _extManager;
+		
+		public int Port { get; private set; }
 
-		internal ExtensionManager ExtManager { get; private set; }
+		public int MaxConnections { get; private set; }
 
-		internal Dictionary<int, bool> Listenees { get; private set; }
-
-		public NoxServer()
+		public NoxServer(int port = 12345, int maxConnections = 100)
 		{
-			Listenees = new Dictionary<int, bool>();
-			ExtManager = new ExtensionManager();
+			Port = port;
+			MaxConnections = maxConnections;
+			_listener = new TcpListener(IPAddress.Loopback, port);
+			_extManager = new ExtensionManager();
+			ServicePointManager.ServerCertificateValidationCallback += delegate { return true; };
 		}
 
-		public NoxServer ListenTo(int port, bool isHttps = false)
+		#region Shortcut for extensions
+		public NoxServer RegisterExt(INoxExtension ext)
 		{
-			Listenees[port] = isHttps;
+			_extManager.RegExt(ext);
 			return this;
 		}
 
 		public NoxServer RegisterExt<T>() where T : INoxExtension
 		{
-			ExtManager.RegExt<T>();
+			_extManager.RegExt<T>();
 			return this;
 		}
 
-		public NoxServer RegisterExt(Action<HttpListenerContext> process)
+		public NoxServer RegisterExt(Action<TcpClient> process)
 		{
-			ExtManager.RegExt(process);
+			_extManager.RegExt(process);
 			return this;
 		}
+		#endregion
 
-		/// <summary>
-		/// TODO: start the listener in a thread (or process?)
-		/// </summary>
-		public void Start()
+		public NoxServer Start(ThreadPriority priority = ThreadPriority.Normal)
 		{
-			using (var listener = new HttpListener())
+			_loopingListenerThread = new Thread(() =>
 			{
-				foreach (var kv in Listenees)
-				{
-					var _proto = kv.Value ? "https://" : "http://";
-					listener.Prefixes.Add($"{_proto}{LOCALHOST}:{kv.Key}/");
-				}
+				_listener.Start();
 
-				listener.Start();
-
-				var sem = new Semaphore(100, 100);
+				var sem = new Semaphore(MaxConnections, MaxConnections);
 
 				while (true)
 				{
 					sem.WaitOne();
 
-					listener.GetContextAsync().ContinueWith(async act =>
+					_listener.AcceptTcpClientAsync().ContinueWith(async task =>
 					{
+						TcpClient tcpClient = await task;
+						await Task.Run(() => _extManager.ProcessAllExt(tcpClient));
+						if (tcpClient.Connected)
+						{
+							tcpClient.Close();
+						}
 						sem.Release();
-						var _context = await act;
-						await Task.Run(() => ExtManager.ProcessAllExt(_context));
 					});
 				}
+			});
+
+			_loopingListenerThread.Priority = priority;
+			_loopingListenerThread.Start();
+			return this;
+		}
+
+		public void Stop()
+		{
+			_listener.Stop();
+			_loopingListenerThread.Abort();
+			if (_loopingListenerThread.IsAlive)
+			{
+				_loopingListenerThread.Join();
 			}
 		}
 	}

@@ -5,11 +5,11 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("Nox.CommonExtension")]
+[assembly: AssemblyTitle("Nox.Test")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("Dave Wu")]
-[assembly: AssemblyProduct("Nox.CommonExtension")]
+[assembly: AssemblyCompany("Microsoft")]
+[assembly: AssemblyProduct("Nox.Test")]
 [assembly: AssemblyCopyright("Copyright © Microsoft 2017")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
@@ -20,7 +20,7 @@ using System.Runtime.InteropServices;
 [assembly: ComVisible(false)]
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
-[assembly: Guid("4702da50-8c11-4604-8af7-b0bd1b17bb67")]
+[assembly: Guid("47dbec77-81b7-463e-b91d-ac46b8450285")]
 
 // Version information for an assembly consists of the following four values:
 //

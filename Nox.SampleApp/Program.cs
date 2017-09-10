@@ -1,6 +1,7 @@
 ﻿using System;
+using System.Threading;
 using Nox.Core;
-using Nox.CommonExtension;
+using Nox.Extension;
 
 namespace Nox.SampleApp
 {
@@ -10,12 +11,18 @@ namespace Nox.SampleApp
 		{
 			Console.WriteLine("Nox ...");
 
-			new NoxServer()
-				.ListenTo(12345)
-				.RegisterExt(context => Console.WriteLine($"Get {context.Request.Url}"))
-				.RegisterExt<SampleExtension>()
-				.RegisterExt(context => Console.WriteLine($"Done {context.Request.Url}"))
+			var nox = new NoxServer()
+				.RegisterExt<NoxProxy>()
 				.Start();
+
+			while (true)
+			{
+				if (Console.ReadKey().KeyChar.Equals('q')) break;
+				Thread.Sleep(0);
+			}
+
+			Console.WriteLine("\r\nStopping Nox ...");
+			nox.Stop();
 		}
 	}
 }
