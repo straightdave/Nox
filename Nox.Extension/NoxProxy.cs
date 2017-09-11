@@ -61,6 +61,7 @@ namespace Nox.Extension
 					_writer.WriteLine($"Proxy-agent: dave-nox");
 					_writer.WriteLine();
 					_writer.Flush();
+					_writer.Close();
 					return;
 				}
 

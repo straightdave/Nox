@@ -5,11 +5,11 @@ VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nox.Core", "Nox.Core\Nox.Core.csproj", "{ED570FA4-F306-45C2-B830-442A033221D8}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nox.App", "Nox.SampleApp\Nox.App.csproj", "{A7D21C9F-0749-45D2-AF64-FE49F36795DD}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nox.Test", "Nox.Test\Nox.Test.csproj", "{47DBEC77-81B7-463E-B91D-AC46B8450285}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nox.Extension", "Nox.Extension\Nox.Extension.csproj", "{67FA6D03-0DC0-48A7-85C7-CB0F739313A4}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nox.App", "..\..\..\..\Documents\Visual Studio 2015\Projects\Nox\Nox.App\Nox.App.csproj", "{A7D21C9F-0749-45D2-AF64-FE49F36795DD}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,10 +21,6 @@ Global
 		{ED570FA4-F306-45C2-B830-442A033221D8}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{ED570FA4-F306-45C2-B830-442A033221D8}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{ED570FA4-F306-45C2-B830-442A033221D8}.Release|Any CPU.Build.0 = Release|Any CPU
-		{A7D21C9F-0749-45D2-AF64-FE49F36795DD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{A7D21C9F-0749-45D2-AF64-FE49F36795DD}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{A7D21C9F-0749-45D2-AF64-FE49F36795DD}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{A7D21C9F-0749-45D2-AF64-FE49F36795DD}.Release|Any CPU.Build.0 = Release|Any CPU
 		{47DBEC77-81B7-463E-B91D-AC46B8450285}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{47DBEC77-81B7-463E-B91D-AC46B8450285}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{47DBEC77-81B7-463E-B91D-AC46B8450285}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -33,6 +29,10 @@ Global
 		{67FA6D03-0DC0-48A7-85C7-CB0F739313A4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{67FA6D03-0DC0-48A7-85C7-CB0F739313A4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{67FA6D03-0DC0-48A7-85C7-CB0F739313A4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A7D21C9F-0749-45D2-AF64-FE49F36795DD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A7D21C9F-0749-45D2-AF64-FE49F36795DD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A7D21C9F-0749-45D2-AF64-FE49F36795DD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A7D21C9F-0749-45D2-AF64-FE49F36795DD}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
