@@ -71,7 +71,7 @@ namespace Nox.Test
 			var url = "http://www.ietf.org/rfc/rfc7230.txt";
 			var req = (HttpWebRequest)WebRequest.Create(url);
 			req.UserAgent = "visual studio";
-			//req.Proxy = new WebProxy("127.0.0.1", port);
+			req.Proxy = null;
 
 			var resp = req.GetResponse() as HttpWebResponse;
 			Console.WriteLine($"[{sw.ElapsedMilliseconds}] received response");
