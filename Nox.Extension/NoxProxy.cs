@@ -32,11 +32,11 @@ namespace Nox.Extension
 
 				// read into a memory stream (which can rewind)
 				MemoryStream ms0 = new MemoryStream();
-				byte[] buff0 = new byte[2048];
+				byte[] buff0 = new byte[4096];
 				while (ns.DataAvailable)
 				{
-					var reads = ns.Read(buff0, 0, buff0.Length);
-					ms0.Write(buff0, 0, reads);
+					var reads0 = ns.Read(buff0, 0, buff0.Length);
+					ms0.Write(buff0, 0, reads0);
 				}
 				ms0.Seek(0, SeekOrigin.Begin);
 
@@ -45,7 +45,7 @@ namespace Nox.Extension
 
 				// read http cmd line
 				var cmd = lines[0];
-				PrintInfo(cmd);
+				PrintInfo($"Received => {cmd}");
 
 				var cmd_splits = cmd.Split(SPACE_SPLIT, 3);
 				var verb = GetHttpVerbFromString(cmd_splits[0]);
@@ -55,7 +55,6 @@ namespace Nox.Extension
 				// respond with 'GET /_nox_'
 				if (verb == Verb.GET && url.Contains("_nox_"))
 				{
-					PrintInfo("_nox_ is called");
 					var _writer = new StreamWriter(ns);
 					_writer.WriteLine($"{proto} 200 OK");
 					_writer.WriteLine($"Proxy-agent: dave-nox");
@@ -97,14 +96,11 @@ namespace Nox.Extension
 					int.TryParse(r_host.Split(COLON_SPLIT, 2)[1], out r_port);
 					r_host = r_host.Split(COLON_SPLIT, 2)[0];
 				}
-
-				PrintInfo($"Original Host: {r_host}");
-
+				
 				// create connection to origin server
 				var q = Dns.GetHostEntry(r_host);
 				TcpClient c = new TcpClient();
 				c.Connect(q.AddressList, r_port);
-				PrintInfo("connected to original server");
 				var cs = c.GetStream();
 
 				// copy headers
@@ -112,49 +108,47 @@ namespace Nox.Extension
 				writer.WriteLine(cmd);
 				foreach (var item in headers)
 				{
-					PrintInfo($"{item.Key} => {item.Value}");
 					writer.WriteLine($"{item.Key}: {item.Value}");
 				}
 				writer.WriteLine();  // must have
+				writer.Flush();
 
 				// copy request body if any
 				if (verb == Verb.POST || verb == Verb.PUT)
 				{
+					var pos = ms0.Position;
+					var reader = new StreamReader(ms0);
+					var body = reader.ReadToEnd();
+					PrintInfo(body);
+					ms0.Seek(pos, SeekOrigin.Begin);
 					ms0.CopyTo(cs);
+					cs.Flush();
 				}
-				writer.Flush();
-				PrintInfo("Request sent to original server");
-
-				// read http response from stream, into a new memory stream
+				
 				MemoryStream ms1 = new MemoryStream();
-				byte[] buff = new byte[2048];
-				while (cs.DataAvailable)
+				byte[] buff = new byte[4096];  // maybe the best size
+				int reads = 0;
+				while ((reads = cs.Read(buff, 0, buff.Length)) > 0)
 				{
-					var reads = cs.Read(buff, 0, buff.Length);
 					ms1.Write(buff, 0, reads);
 				}
+
 				ms1.Seek(0, SeekOrigin.Begin);
-				writer.Close(); // close inner stream (cs) & its writer
-				c.Close();    // close inner connection
-				PrintInfo($"Get response. Len:{ms1.Length}. Original server disconnected.");
+				writer.Close();   // close inner stream (cs) & its writer
+				c.Close();        // close inner connection
 
 				var resp_meta_lines = ReadMetaLinesFromMemoryStream(ms1);
-				PrintInfo($"meta lines {resp_meta_lines.Count}");
-
 				ms1.Seek(0, SeekOrigin.Begin);
 
-				PrintInfo($"response first line: {resp_meta_lines[0]}");
+				PrintInfo($"Remote => {resp_meta_lines[0]}");
 
 				// write response to client
-				{
-					ms1.CopyTo(ns);
-					ns.Flush();
-				}
+				ms1.CopyTo(ns);
+				ns.Flush();
 			}
 			catch(Exception ex)
 			{
 				var ea = new NoxEventArgs { Message = "Ex happened", Error = ex };
-				PrintInfoEvent?.Invoke(this, ea);
 				ErrorOccured?.Invoke(this, ea);
 			}
 			finally
@@ -168,11 +162,6 @@ namespace Nox.Extension
 			var v = Verb.UNKNOWN;
 			Enum.TryParse(verb.ToUpperInvariant(), out v);
 			return v;
-		}
-
-		static string GetValueOrNull(Dictionary<string, string> dict, string key)
-		{
-			return dict.ContainsKey(key) ? dict[key] : null;
 		}
 
 		static List<string> ReadMetaLinesFromMemoryStream(MemoryStream ms)

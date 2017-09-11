@@ -9,7 +9,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nox.Test", "Nox.Test\Nox.Te
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nox.Extension", "Nox.Extension\Nox.Extension.csproj", "{67FA6D03-0DC0-48A7-85C7-CB0F739313A4}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nox.App", "..\..\..\..\Documents\Visual Studio 2015\Projects\Nox\Nox.App\Nox.App.csproj", "{A7D21C9F-0749-45D2-AF64-FE49F36795DD}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nox.App", "Nox.App\Nox.App.csproj", "{A7D21C9F-0749-45D2-AF64-FE49F36795DD}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

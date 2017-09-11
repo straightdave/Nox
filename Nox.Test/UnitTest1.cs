@@ -1,9 +1,9 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Net;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Nox.Core;
 using Nox.Extension;
-using System.IO;
 
 namespace Nox.Test
 {
@@ -19,11 +19,6 @@ namespace Nox.Test
 			try
 			{
 				var np = new NoxProxy();
-				np.BeginProcessing += (sender, args) =>
-				{
-					Console.WriteLine($"Get connection");
-				};
-
 				np.PrintInfoEvent += (sender, args) =>
 				{
 					Console.WriteLine(args.Message);
@@ -31,7 +26,7 @@ namespace Nox.Test
 
 				np.ErrorOccured += (sender, args) =>
 				{
-					Console.WriteLine($"ex: {args.Error.Message}");
+					Console.WriteLine(args.Error.Message);
 				};
 
 				nox = new NoxServer(port: port, maxConnections: 10)
@@ -57,14 +52,29 @@ namespace Nox.Test
 		[TestMethod]
 		public void BypassHttpAsProxy()
 		{
+			Stopwatch sw = new Stopwatch();
+			sw.Start();
+			var url = "http://www.ietf.org/rfc/rfc7230.txt";
+			var req = (HttpWebRequest)WebRequest.Create(url);
+			req.UserAgent = "visual studio";
+			req.Proxy = new WebProxy("127.0.0.1", port);
+
+			var resp = req.GetResponse() as HttpWebResponse;
+			Console.WriteLine($"[{sw.ElapsedMilliseconds}] received response");
+		}
+
+		[TestMethod]
+		public void TimeWithoutProxy()
+		{
+			Stopwatch sw = new Stopwatch();
+			sw.Start();
 			var url = "http://www.ietf.org/rfc/rfc7230.txt";
 			var req = (HttpWebRequest)WebRequest.Create(url);
 			req.UserAgent = "visual studio";
 			//req.Proxy = new WebProxy("127.0.0.1", port);
 
 			var resp = req.GetResponse() as HttpWebResponse;
-			StreamReader reader = new StreamReader(resp.GetResponseStream());
-			Console.WriteLine(reader.ReadToEnd());
+			Console.WriteLine($"[{sw.ElapsedMilliseconds}] received response");
 		}
 
 		[TestCleanup]
