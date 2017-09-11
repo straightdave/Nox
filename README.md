@@ -1,2 +1,2 @@
 # Nox
-Simple .Net Proxy lib
+.Net Proxy lib
