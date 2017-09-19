@@ -13,72 +13,85 @@ namespace Nox.Extension
 		private static char[] SPACE_SPLIT = new char[] { ' ' };
 		private static char[] COLON_SPLIT = new char[] { ':' };
 		private static char[] COMMA_SPLIT = new char[] { ',' };
-
-		// required events
-		public event NoxExtensionEventHandler BeginProcessing;
-		public event NoxExtensionEventHandler EndProcessing;
+		private static string PAYLOAD_DELIMITER = "---nox---";
+		
 		public event NoxExtensionEventHandler ErrorOccured;
-
-		// additional events
 		public event NoxExtensionEventHandler PrintInfoEvent;
 
 		public void Process(TcpClient tcpClient)
 		{
-			BeginProcessing?.Invoke(this, null);
-
 			try
 			{
-				var ns = tcpClient.GetStream();
+				NetworkStream ns = tcpClient.GetStream();
 
-				// read into a memory stream (which can rewind)
-				MemoryStream ms0 = new MemoryStream();
-				byte[] buff0 = new byte[4096];
-				while (ns.DataAvailable)
-				{
-					var reads0 = ns.Read(buff0, 0, buff0.Length);
-					ms0.Write(buff0, 0, reads0);
-				}
-				ms0.Seek(0, SeekOrigin.Begin);
+				// copy into a memory stream (which can rewind)
+				// Note: ns maybe not all consumed if it has payload
+				MemoryStream reqInMem = CopyStreamFrom(ns);
 
-				// get metadata lines
-				List<string> lines = ReadMetaLinesFromMemoryStream(ms0);
+				// get raw request content into lines
+				List<string> reqLines = ReadIntoLines(reqInMem);
 
 				// read http cmd line
-				var cmd = lines[0];
-				PrintInfo($"Received => {cmd}");
-
-				var cmd_splits = cmd.Split(SPACE_SPLIT, 3);
-				var verb = GetHttpVerbFromString(cmd_splits[0]);
-				var url = cmd_splits[1];
-				var proto = cmd_splits[2];
-
-				// respond with 'GET /_nox_'
-				if (verb == Verb.GET && url.Contains("_nox_"))
-				{
-					var _writer = new StreamWriter(ns);
-					_writer.WriteLine($"{proto} 200 OK");
-					_writer.WriteLine($"Proxy-agent: dave-nox");
-					_writer.WriteLine();
-					_writer.Flush();
-					_writer.Close();
-					return;
-				}
+				string httpCmd = reqLines[0];
+				var cmd_splits = httpCmd.Split(SPACE_SPLIT, 3);
+				Verb verb = GetHttpVerbFromString(cmd_splits[0]);
+				string url = cmd_splits[1];
+				string proto = cmd_splits[2];
 
 				// read headers
 				var headers = new Dictionary<string, string>();
-				lines.GetRange(1, lines.Count - 1).ForEach(x =>
+				reqLines.GetRange(1, reqLines.IndexOf(PAYLOAD_DELIMITER) - 1).ForEach(x =>
 				{
 					var _splits = x.Split(COLON_SPLIT, 2);
 					headers.Add(_splits[0].Trim().ToLowerInvariant(), _splits[1].Trim());
 				});
 
-				// remove connection persistence in headers
+				// respond with 'GET /_nox_'
+				if (verb == Verb.GET && url.Contains("_nox_"))
+				{
+					var _w = new StreamWriter(ns);
+					_w.WriteLine($"{proto} 200 OK");
+					_w.WriteLine("Proxy-agent: dave-nox");
+					_w.WriteLine("Content-Type: text/html");
+					_w.WriteLine("Connection: close");
+					_w.WriteLine();
+					_w.WriteLine("<html><body><h1>nox is running</h1></body></html>");
+					_w.Flush();
+					_w.Close();
+					reqInMem.Close();
+					return;
+				}
+				
+				// read payload (if any)
+				if (verb == Verb.POST || verb == Verb.PUT)
+				{
+					PrintInfo("Reading payload");
+					if (headers.ContainsKey("content-length"))
+					{
+						int len = 0;
+						int.TryParse(headers["content-length"], out len);
+
+						if (len > 0)
+						{
+							// ms0 is at the right position
+							byte[] buffer = new byte[len];
+							int _reads = ns.Read(buffer, 0, buffer.Length);
+							reqInMem.Write(buffer, 0, _reads);
+						}
+
+						PrintInfo("Raw request after reading payload");
+						PrintInfo(DumpContentOf(reqInMem));
+					}
+				}
+
+				// RFC2616: as a proxy, to remove connection persistence in headers
+				PrintInfo("Modify connection headers");
 				if (headers.ContainsKey("connection"))
 				{
 					var _tokens = headers["connection"].Split(COMMA_SPLIT);
 					foreach (string t in _tokens)
 					{
-						headers.Remove(t.Trim());
+						headers.Remove(t.Trim().ToLowerInvariant());
 					}
 					headers["connection"] = "close";
 				}
@@ -87,7 +100,7 @@ namespace Nox.Extension
 					headers.Add("connection", "close");
 				}
 
-				// RFC2612: Http 1.1 requests must have 'Host' header
+				// RFC2616: Http 1.1 requests must have 'Host' header
 				// TODO: respond with error message if no 'Host' exists
 				var r_host = headers["host"];
 				var r_port = 80;
@@ -101,62 +114,114 @@ namespace Nox.Extension
 				var q = Dns.GetHostEntry(r_host);
 				TcpClient c = new TcpClient();
 				c.Connect(q.AddressList, r_port);
-				var cs = c.GetStream();
+				PrintInfo($"Connected to {r_host}");
 
-				// copy headers
+				NetworkStream cs = c.GetStream();
+
+				// copy http cmd and headers
 				var writer = new StreamWriter(cs);
-				writer.WriteLine(cmd);
+				writer.WriteLine(httpCmd);
 				foreach (var item in headers)
 				{
 					writer.WriteLine($"{item.Key}: {item.Value}");
 				}
 				writer.WriteLine();  // must have
 				writer.Flush();
-
+				
 				// copy request body if any
 				if (verb == Verb.POST || verb == Verb.PUT)
 				{
-					var pos = ms0.Position;
-					var reader = new StreamReader(ms0);
+					// TODO!!! to now pos is 0;
+					var pos = reqInMem.Position;
+					var reader = new StreamReader(reqInMem);
 					var body = reader.ReadToEnd();
-					PrintInfo(body);
-					ms0.Seek(pos, SeekOrigin.Begin);
-					ms0.CopyTo(cs);
+					reqInMem.Seek(pos, SeekOrigin.Begin);
+					reqInMem.CopyTo(cs);
 					cs.Flush();
 				}
-				
-				MemoryStream ms1 = new MemoryStream();
-				byte[] buff = new byte[4096];  // maybe the best size
-				int reads = 0;
-				while ((reads = cs.Read(buff, 0, buff.Length)) > 0)
+
+				// wait for response
+				int timeout = 0;
+				while (!cs.DataAvailable)
 				{
-					ms1.Write(buff, 0, reads);
+					System.Threading.Thread.Sleep(50);
+
+					if (timeout++ > 100)
+					{
+						var _w = new StreamWriter(ns);
+						_w.WriteLine($"{proto} 505 Timeout");
+						_w.WriteLine("Proxy-agent: dave-nox");
+						_w.WriteLine("Content-Type: text/html");
+						_w.WriteLine("Connection: close");
+						_w.WriteLine();
+						_w.WriteLine("<html><body><h1>proxing timeout</h1></body></html>");
+						_w.Flush();
+
+						_w.Close();
+						cs.Close();
+						reqInMem.Close();
+						return;
+					}
 				}
 
-				ms1.Seek(0, SeekOrigin.Begin);
-				writer.Close();   // close inner stream (cs) & its writer
-				c.Close();        // close inner connection
+				MemoryStream ms1 = CopyStreamFrom(cs, 4096);
+				PrintInfo("-- dump response --");
+				PrintInfo(DumpContentOf(ms1));
+				PrintInfo("-- end dumping response --");
 
-				var resp_meta_lines = ReadMetaLinesFromMemoryStream(ms1);
-				ms1.Seek(0, SeekOrigin.Begin);
 
-				PrintInfo($"Remote => {resp_meta_lines[0]}");
 
-				// write response to client
-				ms1.CopyTo(ns);
-				ns.Flush();
+
+				var _writer = new StreamWriter(ns);
+				_writer.WriteLine($"{proto} 200 OK");
+				_writer.WriteLine("Proxy-agent: dave-nox");
+				_writer.WriteLine("Content-Type: text/html");
+				_writer.WriteLine("Connection: close");
+				_writer.WriteLine();
+				_writer.WriteLine("<html><body><h1>nox is running</h1></body></html>");
+				_writer.Flush();
+				_writer.Close();
+				reqInMem.Close();
+				return;
 			}
-			catch(Exception ex)
+			catch (Exception ex)
 			{
-				var ea = new NoxEventArgs { Message = "Ex happened", Error = ex };
+				var ea = new NoxEventArgs { Error = ex };
 				ErrorOccured?.Invoke(this, ea);
-			}
-			finally
-			{
-				EndProcessing?.Invoke(this, null);
 			}
 		}
 
+		static MemoryStream CopyStreamFrom(NetworkStream netStream, int bufferSize = 2048)
+		{
+			if (netStream.CanRead)
+			{
+				MemoryStream ms = new MemoryStream();
+				byte[] buffer = new byte[bufferSize];
+				int _read = 0;
+				do
+				{
+					_read = netStream.Read(buffer, 0, buffer.Length);
+					ms.Write(buffer, 0, _read);
+				}
+				while (netStream.DataAvailable);
+				ms.Position = 0;
+				return ms;
+			}
+			else
+			{
+				throw new InvalidOperationException("Underlying network stream not readable");
+			}
+		}
+
+		static string DumpContentOf(MemoryStream memStream)
+		{
+			memStream.Position = 0;
+			var reader = new StreamReader(memStream);
+			var content = reader.ReadToEnd();
+			memStream.Position = 0;
+			return content;
+		}
+		
 		static Verb GetHttpVerbFromString(string verb)
 		{
 			var v = Verb.UNKNOWN;
@@ -164,30 +229,32 @@ namespace Nox.Extension
 			return v;
 		}
 
-		static List<string> ReadMetaLinesFromMemoryStream(MemoryStream ms)
+		static List<string> ReadIntoLines(Stream stream)
 		{
 			var result = new List<string>();
 			int line_len = 0;
 			int new_lines = 0;
 			while (true)
 			{
-				var cc = ms.ReadByte();
+				var cc = stream.ReadByte();
 				if (cc < 0) break;
 
-				if (cc == 10 || cc == 13)
+				if (cc == 10 || cc == 13)  // new line characters
 				{
 					new_lines++;
 
 					if (new_lines == 4)
 					{
-						break; // '\r\n\r\n': end of headers or message
+						result.Add(PAYLOAD_DELIMITER);
+						new_lines = 0;
+						continue;
 					}
 
 					if (line_len > 0)
 					{
-						ms.Seek(ms.Position - line_len - 1, SeekOrigin.Begin);
+						stream.Seek(stream.Position - line_len - 1, SeekOrigin.Begin);
 						byte[] _line_bytes = new byte[line_len];
-						ms.Read(_line_bytes, 0, line_len);
+						stream.Read(_line_bytes, 0, line_len);
 
 						result.Add(Encoding.UTF8.GetString(_line_bytes));
 						line_len = 0;
@@ -212,7 +279,7 @@ namespace Nox.Extension
 			PrintInfoEvent?.Invoke(this, new NoxEventArgs { Message = message });
 		}
 	}
-	
+
 	enum Verb
 	{
 		UNKNOWN = 0,

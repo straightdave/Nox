@@ -14,9 +14,6 @@ namespace Nox.Core.Extension
 
 	public interface INoxExtension
 	{
-		// required events
-		event NoxExtensionEventHandler BeginProcessing;
-		event NoxExtensionEventHandler EndProcessing;
 		event NoxExtensionEventHandler ErrorOccured;
 
 		void Process(TcpClient tcpClient);

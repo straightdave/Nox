@@ -4,6 +4,7 @@ using System.Net;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Nox.Core;
 using Nox.Extension;
+using System.IO;
 
 namespace Nox.Test
 {
@@ -43,7 +44,7 @@ namespace Nox.Test
 		public void NoxIsWorking()
 		{
 			var url = $"http://localhost:{port}/_nox_";
-			var req = (HttpWebRequest)WebRequest.Create(url);
+			var req = WebRequest.Create(url) as HttpWebRequest;
 			var resp = req.GetResponse() as HttpWebResponse;
 			Assert.AreEqual(200, (int)resp.StatusCode);
 			Assert.AreEqual("dave-nox", resp.Headers["Proxy-agent"]);
@@ -55,12 +56,33 @@ namespace Nox.Test
 			Stopwatch sw = new Stopwatch();
 			sw.Start();
 			var url = "http://www.ietf.org/rfc/rfc7230.txt";
-			var req = (HttpWebRequest)WebRequest.Create(url);
+			var req = WebRequest.Create(url) as HttpWebRequest;
 			req.UserAgent = "visual studio";
 			req.Proxy = new WebProxy("127.0.0.1", port);
 
 			var resp = req.GetResponse() as HttpWebResponse;
 			Console.WriteLine($"[{sw.ElapsedMilliseconds}] received response");
+
+			Assert.IsNotNull(resp);
+			Assert.AreEqual(HttpStatusCode.OK, resp.StatusCode);
+			Assert.AreEqual("dave-nox", resp.Headers["Proxy-agent"]);
+		}
+
+		[TestMethod]
+		public void BypassPOSTRequest()
+		{
+			var url = "http://posttestserver.com/post.php";
+			var req = WebRequest.Create(url) as HttpWebRequest;
+			req.Proxy = new WebProxy("127.0.0.1", port);
+			req.Method = "POST";
+			req.UserAgent = "visual studio";
+			var writer = new StreamWriter(req.GetRequestStream());
+			writer.WriteLine($"thank this site ------- {DateTime.Now.ToString()}");
+			writer.Flush();
+			
+			var resp = req.GetResponse() as HttpWebResponse;
+			Assert.IsNotNull(resp);
+			Assert.AreEqual(HttpStatusCode.OK, resp.StatusCode);
 		}
 
 		[TestMethod]
@@ -69,7 +91,7 @@ namespace Nox.Test
 			Stopwatch sw = new Stopwatch();
 			sw.Start();
 			var url = "http://www.ietf.org/rfc/rfc7230.txt";
-			var req = (HttpWebRequest)WebRequest.Create(url);
+			var req = WebRequest.Create(url) as HttpWebRequest;
 			req.UserAgent = "visual studio";
 			req.Proxy = null;
 
